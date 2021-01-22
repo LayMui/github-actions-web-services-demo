@@ -31,20 +31,28 @@ jobs:
     environment: production
     steps:
     - uses: actions/checkout@v2
-    - name: Use Node.js ${{ env.NODE_VERSION }}
-      uses: actions/setup-node@v1
+    - name: Set up Python version
+      uses: actions/setup-python@v1
       with:
-        node-version: ${{ env.NODE_VERSION }}
-    - name: npm install, build, and test
+        python-version: '3.6'
+      
+    - name: DB setup
       run: |
-        # Build and test the project, then
-        # deploy to Azure Web App.
-        npm install
-        npm run build --if-present
-        npm run test --if-present
+        pip instll -r requirements.txt
+        python manage.py makemigrations.snippets
+        python manage.py migrate
+        python manage.py loaddata snippets/fixtures/users.json
+        python manage.py loaddata snippets/fixtures/snippets.json
+    
+    - name: Build using AppService-Build
+      uses: azure/appservice-build@v2 
+      with: 
+        platform: python
+        platform.version: '3.6'
+        
     - name: 'Deploy to Azure WebApp'
       uses: azure/webapps-deploy@v2
       with:
         app-name: ${{ env.AZURE_WEBAPP_NAME }}
-        publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
+        publish-profile: ${{ secrets.TEST_SECRET }}
         package: ${{ env.AZURE_WEBAPP_PACKAGE_PATH }}
